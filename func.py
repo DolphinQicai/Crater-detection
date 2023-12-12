@@ -15,22 +15,18 @@ def undistortion(image, camera_matrix, dist_coeff):
     return undistortion_image
 
 def preprocess(img1, img2):
-    # 彩色图->灰度图
-    if(img1.ndim == 3):#判断为三维数组
-        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)  # 通过OpenCV加载的图像通道顺序是BGR
+    if(img1.ndim == 3):
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     if(img2.ndim == 3):
         img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-    # 直方图均衡
     img1 = cv2.equalizeHist(img1)
     img2 = cv2.equalizeHist(img2)
 
     return img1, img2
 
 
-# 视差计算
 def stereoMatchSGBM(left_image, right_image, down_scale=False):
-    # SGBM匹配参数设置
     if left_image.ndim == 2:
         img_channels = 1
     else:
@@ -49,13 +45,11 @@ def stereoMatchSGBM(left_image, right_image, down_scale=False):
              'mode': cv2.STEREO_SGBM_MODE_SGBM_3WAY
              }
 
-    # 构建SGBM对象
     left_matcher = cv2.StereoSGBM_create(**paraml)
     paramr = paraml
     paramr['minDisparity'] = -paraml['numDisparities']
     right_matcher = cv2.StereoSGBM_create(**paramr)
 
-    # 计算视差图
     size = (left_image.shape[1], left_image.shape[0])
     if down_scale == False:
         disparity_left = left_matcher.compute(left_image, right_image)
@@ -73,7 +67,6 @@ def stereoMatchSGBM(left_image, right_image, down_scale=False):
         disparity_left = factor * disparity_left
         disparity_right = factor * disparity_right
 
-    # 真实视差（因为SGBM算法得到的视差是×16的）
     trueDisp_left = disparity_left.astype(np.float32) / 16.
     trueDisp_right = disparity_right.astype(np.float32) / 16.
 
@@ -89,8 +82,6 @@ def get_distance(iml, imr):
                                                     config1280x480.right_map1, config1280x480.right_map2)
     disp, _ = stereoMatchSGBM(iml_rectified_l, imr_rectified_r, True)
     points_3d = cv2.reprojectImageTo3D(disp, config1280x480.Q)
-    # height, width = iml.shape[0:2]
-    # print(height, width)
     for x in range(350, 390):
         for y in range(230, 270):
             if points_3d[y, x, 0] > 0 and points_3d[y, x, 1] > 0:
